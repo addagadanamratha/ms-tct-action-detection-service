@@ -1,0 +1,4 @@
+model,trained_epoch,frame_mAP_%,classes_evaluated,top5_precision,top5_recall,top5_F1,videos_with_hit_%
+Baseline (93 train videos),7,4.84,156,0.1813,0.1002,0.1242,54.67
+Large subset - best epoch,11,10.9,156,0.2853,0.1597,0.1966,72.0
+Large subset - last epoch,12,10.26,156,0.2547,0.151,0.1806,71.33
