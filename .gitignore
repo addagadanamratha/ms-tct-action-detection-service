@@ -221,3 +221,12 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Large files - never commit these
+*.pth
+*.pt
+*.npy
+*.npz
+*.tar.gz
+*.h5
+charades_npy_features/
