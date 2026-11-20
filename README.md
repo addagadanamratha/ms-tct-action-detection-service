@@ -1,4 +1,4 @@
-# MS-TCT Action Detection as a Service — Team 7
+# MS-TCT Action Detection as a Service 
 
 **Team:** Namratha Addagada, Eswar Panta · ITCS 6166 (Computer Communication Networks)
 
