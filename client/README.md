@@ -1,1 +1,0 @@
-Web / mobile GUI client
