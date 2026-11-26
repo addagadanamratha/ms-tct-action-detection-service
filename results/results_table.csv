@@ -1,0 +1,5 @@
+experiment,features,best_epoch,test_map,sampled_test_map,selection
+clip_full,CLIP (appearance),16,21.001,21.032,test set (official code)
+i3d_v2,"I3D (motion, paper's features)",14,22.723,23.186,test set (official code)
+fused,I3D + CLIP fusion,16,24.36,25.059,test set (official code)
+fused_final,"Final: fusion, held-out selection",14,23.599,24.273,held-out 10% of training videos

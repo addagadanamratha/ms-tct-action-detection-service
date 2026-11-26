@@ -1,0 +1,29 @@
+{
+ "name": "ActionLens",
+ "short_name": "ActionLens",
+ "description": "What happens in a video, and when - MS-TCT action detection as a cloud service",
+ "start_url": "/",
+ "scope": "/",
+ "display": "standalone",
+ "background_color": "#f4f4f2",
+ "theme_color": "#1c5cab",
+ "orientation": "portrait",
+ "icons": [
+  {
+   "src": "icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png"
+  },
+  {
+   "src": "icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png"
+  },
+  {
+   "src": "icon-maskable-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  }
+ ]
+}
