@@ -35,6 +35,10 @@ SAMPLES = json.load(open(f"{ASSETS}/samples/samples.json"))          # best demo
 STATS = np.load(f"{ASSETS}/fusion_stats.npz")
 # segment rule tuned on held-out training videos (tune_segments.py); hand-picked fallback
 SEG = dict(k=3, rel=0.5, abs=0.05, gap=1.0, min_len=0.6)
+# confidence threshold calibrated on held-out videos (calibrate_confidence.py); None = mark everything likely
+LIKELY = None
+if os.path.exists(f"{ASSETS}/confidence_params.json"):
+    LIKELY = float(json.load(open(f"{ASSETS}/confidence_params.json"))["likely_threshold"])
 if os.path.exists(f"{ASSETS}/segment_params.json"):
     SEG.update({k: v for k, v in json.load(open(f"{ASSETS}/segment_params.json")).items() if k in SEG})
 
@@ -184,10 +188,11 @@ def summarize(scores, duration, top_k=5, gt_actions=None):
     vs = scores.mean(0)
     top = np.argsort(-vs)[:top_k]
     gt = {int(a[0]) for a in gt_actions} if gt_actions else set()
-    out = {"duration": round(duration, 2), "num_snippets": T, "feature_dim": IN_DIM, "top_actions": [
+    out = {"duration": round(duration, 2), "num_snippets": T, "feature_dim": IN_DIM, "likely_threshold": LIKELY, "top_actions": [
         {"class_id": int(c), "name": CLASSES[c], "score": round(float(vs[c]), 4),
          "peak": round(float(scores[:, c].max()), 4), "segments": find_segments(scores[:, c], step),
          "curve": curve_points(scores[:, c]),
+         "likely": bool(LIKELY is None or vs[c] >= LIKELY),
          "in_ground_truth": (int(c) in gt) if gt_actions else None} for c in top]}
     if gt_actions:
         out["ground_truth"] = [{"class_id": int(c), "name": CLASSES[int(c)], "start": float(s), "end": float(e)}
@@ -208,7 +213,8 @@ def health():
             "trained_epoch": ck.get("epoch"), "test_mAP": round(float(ck.get("test_map", 0)), 2),
             "sampled_test_mAP": round(float(ck.get("sampled_test_map", 0)), 2),
             "num_classes": len(CLASSES), "num_samples": len(SAMPLES),
-            "max_video_seconds": MAX_SECONDS, "cpu_threads": torch.get_num_threads(), "segment_rule": SEG}
+            "max_video_seconds": MAX_SECONDS, "cpu_threads": torch.get_num_threads(), "segment_rule": SEG,
+            "likely_threshold": LIKELY}
 
 
 @app.get("/api/samples")

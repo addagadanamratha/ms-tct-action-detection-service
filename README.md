@@ -14,7 +14,7 @@ and serves it as an *AI-as-a-Service* web application that also installs as a ph
 | 📄 **Paper** | https://arxiv.org/abs/2112.03902 |
 | 💻 **Original code** | https://github.com/dairui01/MS-TCT |
 
-**Team:** Namratha Addagada, Eswar Panta · ITCS 6166 Computer Communication Networks · UNC Charlotte
+**Author:** Namratha Addagada · ITCS 6166 Computer Communication Networks · UNC Charlotte
 
 <p align="center">
   <img src="docs/app_desktop.png" width="62%" alt="ActionLens web app">

@@ -151,6 +151,8 @@
   .moments { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
   .moments button { border: 1px solid var(--accent); color: var(--accent); background: none; border-radius: 999px; padding: 5px 12px;
                     font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .unsure { opacity: .45; }
+  .tag.unc { background: var(--grid); color: var(--muted, #7a7974); }
   .conf { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
   .ph { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--ink); border-radius: 1px; pointer-events: none; left: 0; display: none; }
   .tl.live .ph { display: block; }
@@ -195,7 +197,7 @@
     <div id="paneSample">
       <div class="row">
         <div>
-          <label for="sample">Held-out validation video</label>
+          <label for="sample">Official Charades test video</label>
           <select id="sample"><option>Loading…</option></select>
         </div>
         <div>
@@ -214,7 +216,8 @@
         <span class="or">or upload a file (up to <span id="maxSec">30</span> s are analysed)</span>
       </div>
       <input type="file" id="file" accept="video/*">
-      <p class="hint">Works best like the training videos: one person doing everyday things at home, filmed indoors.
+      <p class="hint"><b>For good results:</b> at least 10 s, filmed from the front or side with the whole body visible,
+        one person doing everyday things at home (e.g. sit down → drink → stand up).
         The server extracts I3D + CLIP features itself, so analysis takes about 15–60 seconds on the free CPU.</p>
     </div>
     <button id="run" class="primary" hidden>Detect actions</button>
@@ -375,7 +378,8 @@ $("run").onclick = async () => {
     setupVideo(data);
     const tm = data.timing ? ` (decode ${data.timing.decode_ms} ms · I3D ${data.timing.i3d_ms} ms · CLIP ${data.timing.clip_ms} ms · MS-TCT ${data.timing.mstct_ms} ms)` : "";
     setMsg(`Analysed in ${((performance.now() - t0) / 1000).toFixed(1)} s round trip${tm}.` +
-           (data.truncated ? ` Only the first ${Math.round(data.duration)} s were analysed.` : ""));
+           (data.truncated ? ` Only the first ${Math.round(data.duration)} s were analysed.` : "") +
+           (mode === "file" && data.duration < 10 ? " Tip: clips of 10 s or longer give better results." : ""));
   } catch (e) {
     setMsg(e.message, true);
   } finally { $("run").disabled = false; }
@@ -394,9 +398,10 @@ function render(d, net) {
   $("actions").innerHTML = d.top_actions.map((a, i) => {
     const tag = a.in_ground_truth === true ? '<span class="tag hit">✓ in ground truth</span>'
               : a.in_ground_truth === false ? '<span class="tag miss">not in ground truth</span>' : "";
+    const unc = a.likely === false ? '<span class="tag unc">uncertain</span>' : "";
     const segs = a.segments.length ? a.segments.map(s => `${s.start}–${s.end} s`).join(", ") : "no clear segment";
-    return `<li data-i="${i}"><span class="sw" style="background:${COLORS[i % 8]}"></span>
-      <span class="aname">${esc(a.name)}${tag}</span>
+    return `<li data-i="${i}" class="${a.likely === false ? "unsure" : ""}"><span class="sw" style="background:${COLORS[i % 8]}"></span>
+      <span class="aname">${esc(a.name)}${unc}${tag}</span>
       <span class="ascore">${(a.score * 100).toFixed(1)}%</span>
       <div class="bar"><span style="width:${(a.score / maxScore * 100).toFixed(1)}%;background:${COLORS[i % 8]}"></span></div>
       <div class="ameta">Predicted at ${segs}</div></li>`;
@@ -404,7 +409,9 @@ function render(d, net) {
 
   // Timeline (Gantt): predicted segments + ground-truth intervals of the same class
   const D = d.duration, pct = t => Math.max(0, Math.min(100, t / D * 100));
+  const anyUnsure = d.top_actions.some(a => a.likely === false);
   $("legend").innerHTML = `<span><i style="background:${COLORS[0]}"></i>Predicted (colour = action)</span>` +
+    (anyUnsure ? `<span><i style="background:${COLORS[0]};opacity:.45"></i>Faded “?” = uncertain (low model confidence)</span>` : "") +
     `<span><i style="background:${COLORS[0]};opacity:.25;height:8px"></i>Model confidence</span>` +
     (hasGT ? `<span><i style="background:var(--gt)"></i>Ground truth</span>` : "");
   $("timeline").innerHTML = d.top_actions.map((a, i) => {
@@ -420,7 +427,8 @@ function render(d, net) {
       conf = `<svg class="conf" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
         <polygon points="0,100 ${pts} 100,100" fill="${COLORS[i % 8]}" opacity="0.16"/></svg>`;
     }
-    return `<div class="lab" data-i="${i}" title="${esc(a.name)}">${esc(a.name)}</div><div class="track">${conf}${gtBars}${pBars}<div class="ph"></div></div>`;
+    const u = a.likely === false ? " unsure" : "";
+    return `<div class="lab${u}" data-i="${i}" title="${esc(a.name)}${u ? " (uncertain)" : ""}">${esc(a.name)}${u ? " ?" : ""}</div><div class="track${u}">${conf}${gtBars}${pBars}<div class="ph"></div></div>`;
   }).join("");
   const step = D > 60 ? 15 : D > 30 ? 10 : 5;
   let ticks = ""; for (let t = 0; t <= D; t += step) ticks += `<span style="left:${pct(t)}%">${t}s</span>`;
@@ -453,12 +461,12 @@ const fmtT = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2
 let diaryText = "";
 function buildDiary(d) {
   const items = [];
-  d.top_actions.forEach((a, i) => a.segments.forEach(s => items.push({ ...s, name: a.name, i })));
+  d.top_actions.forEach((a, i) => { if (a.likely !== false) a.segments.forEach(s => items.push({ ...s, name: a.name, i })); });
   items.sort((x, y) => x.start - y.start || y.end - x.end);
   $("diary").innerHTML = items.length ? items.map(it =>
     `<li data-t="${it.start}"><span class="when">${fmtT(it.start)} – ${fmtT(it.end)}</span>` +
     `<span class="dot" style="background:${COLORS[it.i % 8]}"></span><span>${esc(it.name)}</span></li>`).join("")
-    : '<li><span class="when">–</span><span></span><span>No clear action segments.</span></li>';
+    : '<li><span class="when">–</span><span></span><span>The model is not confident about any action in this video.</span></li>';
   const title = d.video_id ? `Video ${d.video_id}` : (d.filename || "My video");
   diaryText = `${title} (${d.duration.toFixed(0)} s), analysed by ActionLens:\n` +
     items.map(it => `${fmtT(it.start)}–${fmtT(it.end)}  ${it.name}`).join("\n");
@@ -657,7 +665,7 @@ function sync() {
   });
   $("timeline").querySelectorAll(".lab").forEach(l => l.classList.toggle("act", active.has(+l.dataset.i)));
   $("actions").querySelectorAll("li").forEach(li => li.classList.toggle("act", active.has(+li.dataset.i)));
-  const names = [...active].map(i => `<b>${esc(current.top_actions[i].name)}</b>`);
+  const names = [...active].filter(i => current.top_actions[i].likely !== false).map(i => `<b>${esc(current.top_actions[i].name)}</b>`);
   $("now").innerHTML = names.length ? "Now: " + names.join(" · ") : '<span style="color:var(--muted)">No predicted action right now</span>';
   $("vtime").textContent = `${t.toFixed(1)} / ${D.toFixed(1)} s`;
 }

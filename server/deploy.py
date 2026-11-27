@@ -10,6 +10,6 @@ api.add_space_variable(SPACE, "MODEL_REPO", "namratha-addagada/ms-tct-charades-f
 api.add_space_variable(SPACE, "MAX_VIDEO_SECONDS", "30")
 api.upload_folder(folder_path=".", repo_id=SPACE, repo_type="space",
                   allow_patterns=["app.py", "Dockerfile", "requirements.txt", "web/*"],
-                  commit_message="v6: ActionLens - diary, search any moment (CLIP), installable phone app")
+                  commit_message="v7: confidence (likely vs uncertain), label + hint fixes")
 print("Uploaded. Watch the build: https://huggingface.co/spaces/" + SPACE)
 print("App: https://namratha-addagada-ms-tct-action-detection.hf.space")
